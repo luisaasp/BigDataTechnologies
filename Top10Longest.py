@@ -29,10 +29,10 @@ class Top10Longest(MRJob):
         ]
 
     def mapper1(self, _, line):
-        fields = line.strip().split('\t')
+        fields = line.split()
         if len(fields) == 4:
             user_id, movie_id, rating, timestamp = fields
-            yield movie_id, len(movie_id)
+            yield movie_id, float(movie_id)
 
 
     def reducer1(self, movie_id, titles):
