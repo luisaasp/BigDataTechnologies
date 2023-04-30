@@ -50,7 +50,7 @@ class LongestTitles(MRJob):
         for title_length, movie_id in sorted(values, reverse=True):
             i += 1
             if i <= self.SHOW_LIMIT:
-                yield movie_id, title_length
+                yield movie_id, title_length, movie_title
 
 
 if __name__ == '__main__':
