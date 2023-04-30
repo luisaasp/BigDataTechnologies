@@ -4,7 +4,6 @@ import csv
 import json
 
 
-
 class LongestTitles(MRJob):
 
     SHOW_LIMIT = 10
@@ -17,9 +16,11 @@ class LongestTitles(MRJob):
         with open("/root/input/u.data", "r", encoding="ISO-8859-1") as infile:
             reader = csv.reader(infile, delimiter='\t')
             next(reader)
+            ratings = []
             for line in reader:
                 if int(movie_id) == int(line[1]):
-                    return line[2]
+                    ratings.append(int(line[2]))
+            return ratings
 
     def steps(self):
         '''
@@ -34,16 +35,12 @@ class LongestTitles(MRJob):
         (movie_id, movie_title, *_) = line.split('|')
         yield movie_id, movie_title
 
-    def reducer1(self, movie_id, movie_title):
-        movie_title = json.dumps(list(movie_title))
-        sum_ratings = 0
-        count = 0
-        for r in self.rating(movie_id):
-            sum_ratings += int(r)
-            count += 1
-        if count >= self.MIN_COUNT:
+    def reducer1(self, movie_id, movie_titles):
+        movie_title = json.dumps(list(movie_titles))
+        ratings = self.rating(movie_id)
+        if len(ratings) >= self.MIN_COUNT:
             title_length = len(movie_title)
-            yield movie_id, title_length
+            yield movie_id, (movie_title, title_length)
 
     def mapper2(self, movie_id, title_length):
         yield None, (title_length, movie_id)
@@ -53,7 +50,7 @@ class LongestTitles(MRJob):
         for title_length, movie_id in sorted(values, reverse=True):
             i += 1
             if i <= self.SHOW_LIMIT:
-                yield movie_id, (movie_title, title_length)
+                yield movie_id, (json.loads(title_length)[0], title_length[1])
 
 
 if __name__ == '__main__':
