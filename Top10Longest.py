@@ -1,23 +1,25 @@
 from mrjob.job import MRJob
 from mrjob.step import MRStep
 import csv
+import json
 
 
-class BestMovies(MRJob):
 
-    MIN_COUNT = 10
+class LongestTitles(MRJob):
+
     SHOW_LIMIT = 10
+    MIN_COUNT = 10
 
-    def movie_title(self, movie_id):
+    def rating(self, movie_id):
         '''
-        Convert from movie id to movie title
+        Convert from movie id to rating
         '''
-        with open("u.item", "r", encoding = "ISO-8859-1") as infile:
-            reader = csv.reader(infile, delimiter='|')
+        with open("/root/input/u.data", "r", encoding="ISO-8859-1") as infile:
+            reader = csv.reader(infile, delimiter='\t')
             next(reader)
             for line in reader:
-                if int(movie_id) == int(line[0]):
-                    return line[1]
+                if int(movie_id) == int(line[1]):
+                    return line[2]
 
     def steps(self):
         '''
@@ -25,34 +27,34 @@ class BestMovies(MRJob):
         '''
         return [
             MRStep(mapper=self.mapper1, reducer=self.reducer1),
-            MRStep(mapper=self.mapper2, reducer=self.reducer2),
-            MRStep(mapper=self.mapper3, reducer=self.reducer3),
+            MRStep(mapper=self.mapper2, reducer=self.reducer2)
         ]
 
     def mapper1(self, _, line):
-        (user_id, movie_id, rating, timestamp) = line.split('\t')
-        yield movie_id, (rating, 1)
+        (movie_id, movie_title, *_) = line.split('|')
+        yield movie_id, movie_title
 
-    def reducer1(self, movie_id, ratings):
-        sum_ratings, count = 0, 0
-        for r, c in ratings:
+    def reducer1(self, movie_id, movie_title):
+        movie_title = json.dumps(list(movie_title))
+        sum_ratings = 0
+        count = 0
+        for r in self.rating(movie_id):
             sum_ratings += int(r)
-            count += c
+            count += 1
         if count >= self.MIN_COUNT:
-            yield movie_id, (sum_ratings/float(count), self.movie_title(movie_id))
+            title_length = len(movie_title)
+            yield movie_id, title_length
 
-    def mapper2(self, movie_id, rating_title):
-        yield None, (len(rating_title[1]), rating_title)
+    def mapper2(self, movie_id, title_length):
+        yield None, (title_length, movie_id)
 
     def reducer2(self, _, values):
-        for len_title, rating_title in sorted(values, reverse=True)[:self.SHOW_LIMIT]:
-            yield len_title, rating_title
+        i = 0
+        for title_length, movie_id in sorted(values, reverse=True):
+            i += 1
+            if i <= self.SHOW_LIMIT:
+                yield movie_id, (movie_title, title_length)
 
-    def mapper3(self, len_title, rating_title):
-        yield rating_title[1], rating_title[0]
-
-    def reducer3(self, movie_title, ratings):
-        yield movie_title, sum(ratings)/float(len(list(ratings)))
 
 if __name__ == '__main__':
-    BestMovies.run()
+    LongestTitles.run()
