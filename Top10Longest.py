@@ -43,7 +43,7 @@ class LongestTitles(MRJob):
             yield movie_id, (movie_title, title_length)
 
     def mapper2(self, movie_id, title_length):
-        yield None, (title_length, movie_id)
+        yield None, (title_length[1], movie_id)
 
     def reducer2(self, _, values):
         i = 0
